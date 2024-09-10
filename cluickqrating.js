@@ -2,9 +2,10 @@
 // contact: motokusanagi
 /// BIND TO OPENCONTAINER EVENT
 
-const BUTTON_WIDTH = 80
-const BUTTON_HEIGHT = 22
+const gameOptions = Client.getGameOptions()
 let CRAFTABLE_COUNTS_SHOW = false
+
+let SCR_SCALE = 1
 
 function showCraftableAmounts() {
     CRAFTABLE_COUNTS_SHOW = true
@@ -28,11 +29,11 @@ function drawCraftableList() {
     } // clear craftable tbtns
     const ROW_BTN_LIMIT = 6
     let i = 0
-
+    Chat.log(Math.floor(SCR.getHeight() * (SCR.getHeight()/gameOptions.getHeight())))
     INV.getCraftableRecipes().forEach(recipeHelper => {
         const tbtn = { 
-            x: 40 * (i%ROW_BTN_LIMIT+1), 
-            y: 40 * (Math.floor(i/ROW_BTN_LIMIT)+1) + Math.floor(SCR.getHeight() / 2 - SCR.getHeight() / 4), 
+            x: (20 * SCR_SCALE) * (i % ROW_BTN_LIMIT+1) - 10, 
+            y: (20 * SCR_SCALE) * (Math.floor(i/ROW_BTN_LIMIT)+1) + Math.floor(SCR.getHeight() * (SCR.getHeight()/gameOptions.getHeight())), 
             recipe: recipeHelper,
             actionWrapper:  (shiftCraft) => (() => {recipeHelper.craft(shiftCraft); Client.waitTick(3); INV.quick(0)}) 
         }
@@ -43,7 +44,7 @@ function drawCraftableList() {
 
 function addTexturedButton(tbtn) {
     TEXTURED_BUTTONS.push(tbtn) // add to list
-    tbtn.item = SCR.addItem(tbtn.x, tbtn.y, 10, tbtn.recipe.getId(), false, 2, 0)
+    tbtn.item = SCR.addItem(tbtn.x, tbtn.y, 10, tbtn.recipe.getId(), false, SCR_SCALE, 0)
     tbtn.width = tbtn.item.getScaledWidth()
     tbtn.height = tbtn.item.getScaledHeight()
     tbtn.background = SCR.addRect(tbtn.x, tbtn.y, tbtn.x + tbtn.item.getScaledHeight(), tbtn.y + tbtn.item.getScaledWidth(), 0, 0x00008F, 0, tbtn.item.getZIndex()-1)
@@ -71,8 +72,18 @@ const INV = event.inventory
 const SCR = event.screen
 const TEXTURED_BUTTONS = []
 
+// 4k screen:   5
+//              3840 x 2066
+//              768 x 414
+// 1080 screen: 5
+//              1920 x 1017
+//              480 x 255
+
+
 if (INV.getContainerTitle() == "Crafting") {
+    SCR_SCALE = {3840: 2, 1920: 1}[Client.getGameOptions().getWidth()] ?? SCR_SCALE
     SCR.setOnMouseDown(JavaWrapper.methodToJavaAsync(clicked_screen))
+    SCR.setOnScroll(JavaWrapper.methodToJavaAsync(clicked_screen))
     let inventoryUpdateListener = JsMacros.on('SlotUpdate', JavaWrapper.methodToJava((e) => {
         if (e.type == "INVENTORY" && e.slot < 5 ||
             e.type == "CONTAINER" && e.slot < 10)
