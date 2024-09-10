@@ -6,6 +6,7 @@ const gameOptions = Client.getGameOptions()
 let CRAFTABLE_COUNTS_SHOW = false
 
 let SCR_SCALE = 1
+let UI_SCALE = 1
 
 function showCraftableAmounts() {
     CRAFTABLE_COUNTS_SHOW = true
@@ -29,7 +30,6 @@ function drawCraftableList() {
     } // clear craftable tbtns
     const ROW_BTN_LIMIT = 6
     let i = 0
-    Chat.log(Math.floor(SCR.getHeight() * (SCR.getHeight()/gameOptions.getHeight())))
     INV.getCraftableRecipes().forEach(recipeHelper => {
         const tbtn = { 
             x: (20 * SCR_SCALE) * (i % ROW_BTN_LIMIT+1) - 10, 
@@ -82,16 +82,16 @@ const TEXTURED_BUTTONS = []
 
 if (INV.getContainerTitle() == "Crafting") {
     SCR_SCALE = {3840: 2, 1920: 1}[Client.getGameOptions().getWidth()] ?? SCR_SCALE
-    SCR.setOnMouseDown(JavaWrapper.methodToJavaAsync(clicked_screen))
-    SCR.setOnScroll(JavaWrapper.methodToJavaAsync(clicked_screen))
-    let inventoryUpdateListener = JsMacros.on('SlotUpdate', JavaWrapper.methodToJava((e) => {
+    UI_SCALE = gameOptions.getVideoOptions().getGuiScale()
+    SCR.setOnMouseDown(JavaWrapper.methodToJavaAsync(clicked_screen)) // click handler
+    SCR.setOnScroll(JavaWrapper.methodToJavaAsync(clicked_screen)) // scroll handler
+    let inventoryUpdateListener = JsMacros.on('SlotUpdate', JavaWrapper.methodToJava((e) => { // available ingredients changed
         if (e.type == "INVENTORY" && e.slot < 5 ||
             e.type == "CONTAINER" && e.slot < 10)
             return
         drawCraftableList()
-    }));
-    SCR.setOnClose(JavaWrapper.methodToJavaAsync(() => {JsMacros.off(inventoryUpdateListener)}))
-    SCR.setOnKeyPressed(JavaWrapper.methodToJavaAsync((char, i) => {
+    })); 
+    SCR.setOnKeyPressed(JavaWrapper.methodToJavaAsync((char, i) => { // show craftable count 
         if (!CRAFTABLE_COUNTS_SHOW && char == 340)
             showCraftableAmounts()
         Client.waitTick(10)
@@ -100,4 +100,6 @@ if (INV.getContainerTitle() == "Crafting") {
         
     }))
     drawCraftableList()
+
+    SCR.setOnClose(JavaWrapper.methodToJavaAsync(() => {JsMacros.off(inventoryUpdateListener)})) // clean up
 }  
