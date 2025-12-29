@@ -4,9 +4,14 @@
 
 const gameOptions = Client.getGameOptions()
 let CRAFTABLE_COUNTS_SHOW = false
+const SCRIPT_NAME = "cluickqrating"
 
-let SCR_SCALE = 1
-let UI_SCALE = 1
+let screenScale = 1
+let uiScale = 1
+let DRAWN_RECIPES = new Set()
+const SCR = event.screen
+const INV = event.inventory
+const TEXTURED_BUTTONS = []
 
 function showCraftableAmounts() {
     CRAFTABLE_COUNTS_SHOW = true
@@ -27,27 +32,31 @@ function drawCraftableList() {
         let btn = TEXTURED_BUTTONS.pop()
         SCR.removeElement(btn.item)
         SCR.removeElement(btn.background)
+        DRAWN_RECIPES.delete(btn.item.getItem().getItemId())
     } // clear craftable tbtns
-    const ROW_BTN_LIMIT = 6
+    const ROW_BTN_LIMIT = 8
     let i = 0
     INV.getCraftableRecipes().forEach(recipeHelper => {
+        if (DRAWN_RECIPES.has(recipeHelper.getOutput().getItemId()))
+            return
         const tbtn = { 
-            x: (20 * SCR_SCALE) * (i % ROW_BTN_LIMIT+1) - 10, 
-            y: (20 * SCR_SCALE) * (Math.floor(i/ROW_BTN_LIMIT)+1) + Math.floor(SCR.getHeight() * (SCR.getHeight()/gameOptions.getHeight())), 
+            x: (20 * screenScale) * (i % ROW_BTN_LIMIT+1) - 10, 
+            y: (20 * screenScale) * (Math.floor(i/ROW_BTN_LIMIT)+1) + Math.floor(SCR.getHeight() * (SCR.getHeight()/gameOptions.getHeight())), 
             recipe: recipeHelper,
             actionWrapper:  (shiftCraft) => (() => {recipeHelper.craft(shiftCraft); Client.waitTick(3); INV.quick(0)}) 
         }
         addTexturedButton(tbtn)
         i++
+        DRAWN_RECIPES.add(recipeHelper.getOutput().getItemId())
     })    
 }
 
 function addTexturedButton(tbtn) {
     TEXTURED_BUTTONS.push(tbtn) // add to list
-    tbtn.item = SCR.addItem(tbtn.x, tbtn.y, 10, tbtn.recipe.getId(), false, SCR_SCALE, 0)
+    tbtn.item = SCR.addItem(tbtn.x, tbtn.y, 10, tbtn.recipe.getOutput().getItemId(), false, screenScale, 0)
     tbtn.width = tbtn.item.getScaledWidth()
     tbtn.height = tbtn.item.getScaledHeight()
-    tbtn.background = SCR.addRect(tbtn.x, tbtn.y, tbtn.x + tbtn.item.getScaledHeight(), tbtn.y + tbtn.item.getScaledWidth(), 0, 0x00008F, 0, tbtn.item.getZIndex()-1)
+    tbtn.background = SCR.addRect(tbtn.x, tbtn.y, tbtn.x + tbtn.height, tbtn.y + tbtn.width, 0, 0x00008F, 0, tbtn.item.getZIndex()-1)
 }
 
 function clicked_TexturedButton(tbtn, shiftCraft) {
@@ -66,23 +75,13 @@ function clicked_screen(clickPos, _) {
         }
     }
 }
-///////////////////////////////////////////////////////////////
-/// BIND TO OPENCONTAINER EVENT
-const INV = event.inventory
-const SCR = event.screen
-const TEXTURED_BUTTONS = []
-
-// 4k screen:   5
-//              3840 x 2066
-//              768 x 414
-// 1080 screen: 5
-//              1920 x 1017
-//              480 x 255
 
 
-if (INV.getContainerTitle() == "Crafting") {
-    SCR_SCALE = {3840: 2, 1920: 1}[Client.getGameOptions().getWidth()] ?? SCR_SCALE
-    UI_SCALE = gameOptions.getVideoOptions().getGuiScale()
+
+if (event.inventory.getType() == "Crafting Table") {
+    screenScale = {3840: 2, 1920: 1}[Client.getGameOptions().getWidth()] ?? screenScale
+    uiScale = gameOptions.getVideoOptions().getGuiScale()
+
     SCR.setOnMouseDown(JavaWrapper.methodToJavaAsync(clicked_screen)) // click handler
     SCR.setOnScroll(JavaWrapper.methodToJavaAsync(clicked_screen)) // scroll handler
     let inventoryUpdateListener = JsMacros.on('SlotUpdate', JavaWrapper.methodToJava((e) => { // available ingredients changed
